@@ -3,6 +3,7 @@ import os
 import shutil
 from dataclasses import dataclass
 from typing import List, Union
+import pickle
 
 import cv2
 import numpy as np
@@ -37,7 +38,27 @@ else:
 models_path_old = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models")
 insightface_path_old = os.path.join(models_path_old, "insightface")
 insightface_models_path_old = os.path.join(insightface_path_old, "models")
+########zyc modify start 2024/04/20 #########
+CACHE_DATA={}
+CACHE_SIZE=1000
+from queue import *
+CACHE_QUEUE=Queue()
 
+def get_cache_faces(md5:str):
+    if md5 in CACHE_DATA:
+        return CACHE_DATA[md5]
+    else:
+        return None
+        
+def cache_faces(md5:str,faces):
+    if CACHE_QUEUE.qsize()>CACHE_SIZE:
+        del_id=CACHE_QUEUE.get()
+        del(CACHE_DATA[del_id])
+    CACHE_DATA[md5]=faces
+    
+########zyc modify end 2024/04/20 #########
+import json
+localtmp= '/tmp/reactor'
 models_path = folder_paths.models_dir
 insightface_path = os.path.join(models_path, "insightface")
 insightface_models_path = os.path.join(insightface_path, "models")
@@ -139,9 +160,16 @@ def half_det_size(det_size):
     return (det_size[0] // 2, det_size[1] // 2)
 
 def analyze_faces(img_data: np.ndarray, det_size=(640, 640)):
+    md5=get_image_md5hash(img_data)
+    faces=get_cache_faces(md5)
+    if faces is not None:
+        logger.info("use cached analyze")
+        return faces
     face_analyser = copy.deepcopy(getAnalysisModel())
     face_analyser.prepare(ctx_id=0, det_size=det_size)
-    return face_analyser.get(img_data)
+    faces=face_analyser.get(img_data)
+    cache_faces(md5,faces)
+    return faces
 
 def get_face_single(img_data: np.ndarray, face, face_index=0, det_size=(640, 640), gender_source=0, gender_target=0, order="large-small"):
 

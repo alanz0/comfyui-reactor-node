@@ -130,12 +130,29 @@ class FaceRestoreHelper(object):
             f = 512.0/min(self.input_img.shape[:2])
             self.input_img = cv2.resize(self.input_img, (0,0), fx=f, fy=f, interpolation=cv2.INTER_LINEAR)
 
+
+    def sort_by_order(self,bbox, order: str):
+        if order == "left-right":
+            return sorted(bbox, key=lambda x: x[0])
+        if order == "right-left":
+            return sorted(bbox, key=lambda x: x[0], reverse = True)
+        if order == "top-bottom":
+            return sorted(bbox, key=lambda x: x[1])
+        if order == "bottom-top":
+            return sorted(face, key=lambda x: x[1], reverse = True)
+        if order == "small-large":
+            return sorted(bbox, key=lambda x: (x[2] - x[0]) * (x[3] - x[1]))
+        # if order == "large-small":
+        #     return sorted(face, key=lambda x: (x.bbox[2] - x.bbox[0]) * (x.bbox[3] - x.bbox[1]), reverse = True)
+        # by default "large-small":
+        return sorted(bbox, key=lambda x: (x[2] - x[0]) * (x[3] - x[1]), reverse = True)
+
     def get_face_landmarks_5(self,
                              only_keep_largest=False,
                              only_center_face=False,
                              resize=None,
                              blur_ratio=0.01,
-                             eye_dist_threshold=None):
+                             eye_dist_threshold=None,input_faces_index="0",faces_order=None):
         if resize is None:
             scale = 1
             input_img = self.input_img
@@ -154,8 +171,13 @@ class FaceRestoreHelper(object):
             return 0
         else:
             bboxes = bboxes / scale
-
-        for bbox in bboxes:
+        bbox_sorted = self.sort_by_order(bboxes, faces_order)
+        new_box=[]
+        posstrs=input_faces_index.split(",")
+        for posstr in posstrs:
+            new_box.append(bbox_sorted[int(posstr)])    
+        print(newbox)
+        for bbox in new_box:
             # remove faces with too small eye distance: side faces or too small faces
             eye_dist = np.linalg.norm([bbox[6] - bbox[8], bbox[7] - bbox[9]])
             if eye_dist_threshold is not None and (eye_dist < eye_dist_threshold):

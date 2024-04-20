@@ -43,8 +43,7 @@ from reactor_utils import (
     download,
     set_ort_session,
     prepare_cropped_face,
-    normalize_cropped_face,
-    add_folder_path_and_extensions
+    normalize_cropped_face
 )
 from reactor_log_patch import apply_logging_patch
 from r_facelib.utils.face_restoration_helper import FaceRestoreHelper
@@ -69,13 +68,6 @@ os.makedirs(dir_facerestore_models, exist_ok=True)
 folder_paths.folder_names_and_paths["facerestore_models"] = ([dir_facerestore_models], folder_paths.supported_pt_extensions)
 
 BLENDED_FACE_MODEL = None
-
-if "ultralytics" not in folder_paths.folder_names_and_paths:
-    add_folder_path_and_extensions("ultralytics_bbox", [os.path.join(models_dir, "ultralytics", "bbox")], folder_paths.supported_pt_extensions)
-    add_folder_path_and_extensions("ultralytics_segm", [os.path.join(models_dir, "ultralytics", "segm")], folder_paths.supported_pt_extensions)
-    add_folder_path_and_extensions("ultralytics", [os.path.join(models_dir, "ultralytics")], folder_paths.supported_pt_extensions)
-if "sams" not in folder_paths.folder_names_and_paths:
-    add_folder_path_and_extensions("sams", [os.path.join(models_dir, "sams")], folder_paths.supported_pt_extensions)
 
 def get_facemodels():
     models_path = os.path.join(FACE_MODELS_PATH, "*")
@@ -152,7 +144,9 @@ class reactor:
             face_restore_model,
             face_restore_visibility,
             codeformer_weight,
-            facedetection
+            facedetection,
+            input_faces_index,
+            faces_order=None
         ):
 
         result = input_image
@@ -216,7 +210,7 @@ class reactor:
 
                 self.face_helper.clean_all()
                 self.face_helper.read_image(cur_image_np)
-                self.face_helper.get_face_landmarks_5(only_center_face=False, resize=640, eye_dist_threshold=5)
+                self.face_helper.get_face_landmarks_5(only_center_face=False, resize=640, eye_dist_threshold=5,input_faces_index=input_faces_index,faces_order=faces_order)
                 self.face_helper.align_warp_face()
 
                 restored_face = None
@@ -229,7 +223,6 @@ class reactor:
                     cropped_face_t = cropped_face_t.unsqueeze(0).to(device)
 
                     try:
-                        
                         with torch.no_grad():
 
                             if ".onnx" in face_restore_model: # ONNX models
@@ -328,7 +321,7 @@ class reactor:
         else:
             face_model_to_provide = face_model
         
-        result = reactor.restore_face(self,result,face_restore_model,face_restore_visibility,codeformer_weight,facedetection)
+        result = reactor.restore_face(self,result,face_restore_model,face_restore_visibility,codeformer_weight,facedetection,input_faces_index,faces_order)
 
         return (result,face_model_to_provide)
 
