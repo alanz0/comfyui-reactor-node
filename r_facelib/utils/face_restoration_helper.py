@@ -176,7 +176,6 @@ class FaceRestoreHelper(object):
         posstrs=input_faces_index.split(",")
         for posstr in posstrs:
             new_box.append(bbox_sorted[int(posstr)])    
-        print(new_box)
         for bbox in new_box:
             # remove faces with too small eye distance: side faces or too small faces
             eye_dist = np.linalg.norm([bbox[6] - bbox[8], bbox[7] - bbox[9]])
